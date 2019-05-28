@@ -9,9 +9,6 @@ import pandas as pd
 import numpy as np
 import time
 import datetime
-import time
-import operator
-import random
 from collections import Counter
 import os
 from sklearn.utils import shuffle
@@ -35,7 +32,6 @@ from keras.layers import Dense
 from keras.layers import Dropout
 from keras.callbacks import ModelCheckpoint
 from sklearn.externals import joblib
-import numpy
 
 APIKey = 'RGAPI-76d4ad23-73a4-4ec4-978b-b42a295c189b'
 region = 'NA1'
@@ -218,7 +214,7 @@ def MelhoresChamps(Matchs, qtd =5):
 def create_model(): 
     # Criar arquitetura do modelo
     model = Sequential()
-    model.add(Dense(100, input_dim=1460, activation='relu'))
+    model.add(Dense(100, input_dim=1490, activation='relu'))
     model.add(Dropout(0.2))
     model.add(Dense(450, activation='relu'))
     model.add(Dropout(0.2))
@@ -236,7 +232,7 @@ def Train_model(model,X,Y,epochs):
     checkpointer = ModelCheckpoint(filepath="train_weights.hdf5", verbose=1, save_best_only=False)
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
     model.fit(X_train, y_train, epochs=epochs, batch_size=32, verbose=1, callbacks=[tbCallBack,checkpointer])
-    return model
+    return model,X_test, y_test
 
 def TransformSplitMatchs(Matchs):
     Database = Matchs.iloc[:, 1:32]
@@ -287,21 +283,20 @@ def main():
         List_Thread.append(Thread(target=GerarBase,args=[5000,99999,region]))
     for thread in List_Thread:
         thread.start()
-    MelhoresChamps(Matchs, 20)
     Matchs = AbrirBases()    
+    MelhoresChamps(Matchs, 20)
     X,Y= TransformSplitMatchs(Matchs)    
-    X = Transform(X,False)
+    X = Transform(X,True)
     model = create_model()
-    model = Train_model(model,X,Y,10)
+    model,X_test, y_test = Train_model(model,X,Y,10)
     loss_and_metrics = model.evaluate(X_test, y_test, batch_size=128)    
-    y_pred = new_model.predict_classes(X_test,batch_size=128, verbose=0)
+    y_pred = model.predict_classes(X_test,batch_size=128, verbose=0)
     y_test = y_test.astype(int)
     cm = confusion_matrix(y_test,y_pred)
     report = classification_report(y_test,y_pred)
     print(report)
     print('Accuracy Test : {}'.format((cm[0][0]+cm[1][1])/sum(sum(cm))))
-    new_model = CarregarModelo()
-
+    print(loss_and_metrics)
 #    seed = 5
 #    np.random.seed(seed)
 #    estimators = []
