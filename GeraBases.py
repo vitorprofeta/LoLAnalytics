@@ -32,6 +32,7 @@ from keras.layers import Dense
 from keras.layers import Dropout
 from keras.callbacks import ModelCheckpoint
 from sklearn.externals import joblib
+from sklearn import tree
 
 APIKey = 'RGAPI-76d4ad23-73a4-4ec4-978b-b42a295c189b'
 region = 'NA1'
@@ -117,6 +118,7 @@ def BuscaPartidas(MatchList, queue = 420, qtd_max = 100000, region = 'BR1'):
                     if ResponseJSON['queueId'] == queue:    
                         Dict_Partida = {}
                         Dict_Partida['gameId'] = ResponseJSON['gameId']
+                        Dict_Partida['Region'] = region
                         for Team in range(2):
                             Dict_Partida['Time_'+str(Team)+'_Result'] = ResponseJSON['teams'][Team]['win']
                             for Player in range(5):
@@ -166,6 +168,14 @@ def AbrirBases():
     for file in os.listdir(PATH):
         frames.append(pd.read_csv(PATH+ "\\"+ file,sep=';'))
     return pd.concat(frames)
+
+
+def InserirRegiaoBases():
+    PATH = 'Database\Matchs'
+    for file in os.listdir(PATH):
+        df = pd.read_csv(PATH+ "\\"+ file,sep=';')
+        df['Region'] = ProcurarRegiao(file)
+        df.to_csv('Database\Matchsv2\\'+file,sep =';')
 
 
 def MelhoresChamps(Matchs, qtd =5):
@@ -274,6 +284,16 @@ def CarregarModelo():
     model.load_weights('train_weights.hdf5')
     return model
 
+
+
+def ProcurarRegiao(file):
+    regions = ['BR1','NA1','KR','RU','OC1','EUN1','EUW1','TR1','LA1','LA2']
+    for region in regions:
+        if region in file:
+            print(region)
+            return region
+
+
 def main():
 
     regions = ['BR1','NA1','KR','RU','OC1','EUN1','EUW1','TR1','LA1','LA2']
@@ -283,9 +303,14 @@ def main():
         List_Thread.append(Thread(target=GerarBase,args=[5000,99999,region]))
     for thread in List_Thread:
         thread.start()
-    Matchs = AbrirBases()    
+        Matchs = AbrirBases()    
     MelhoresChamps(Matchs, 20)
+   
     X,Y= TransformSplitMatchs(Matchs)    
+    
+    
+
+    #### Rede Neural
     X = Transform(X,True)
     model = create_model()
     model,X_test, y_test = Train_model(model,X,Y,10)
@@ -297,6 +322,23 @@ def main():
     print(report)
     print('Accuracy Test : {}'.format((cm[0][0]+cm[1][1])/sum(sum(cm))))
     print(loss_and_metrics)
+    
+    
+    ### Arvore de Decisão
+    X = pd.get_dummies(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.3)
+    clf = tree.DecisionTreeClassifier()
+    clf.fit(X_train,y_train)
+    y_pred = clf.predict(X_test)
+    y_true =  y_test
+    from sklearn.metrics import r2_score
+    from sklearn.metrics import explained_variance_score
+    from sklearn.metrics import mean_absolute_error
+    r2_score(y_true, y_pred)    
+    array = clf.feature_importances_  
+    
+    
+    
 #    seed = 5
 #    np.random.seed(seed)
 #    estimators = []
