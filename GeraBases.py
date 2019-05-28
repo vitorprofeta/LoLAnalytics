@@ -37,7 +37,7 @@ from keras.callbacks import ModelCheckpoint
 from sklearn.externals import joblib
 import numpy
 
-APIKey = 'RGAPI-a01d405a-c90e-4343-a343-b3c6e213b3bb'
+APIKey = 'RGAPI-76d4ad23-73a4-4ec4-978b-b42a295c189b'
 region = 'NA1'
 summonerId = '569095'
 n_matchs = 30
@@ -48,26 +48,26 @@ regions = ['BR1','NA1','KR','RU','OC1','EUN1','EUW1','TR1','LA1','LA2']
 
 
 def requestLeague(region):
-    URL = 'https://{}.api.riotgames.com/lol/league/v3/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={}'.format(region,APIKey)
+    URL = 'https://{}.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={}'.format(region,APIKey)
     response = requests.get(URL)
     time.sleep(TIME_PAUSE)
     return response.json()   
 
 
 def requestMatch(matchID,region):
-    URL = 'https://{}.api.riotgames.com/lol/match/v3/matches/{}?api_key={}'.format(region,matchID,APIKey)
+    URL = 'https://{}.api.riotgames.com/lol/match/v4/matches/{}?api_key={}'.format(region,matchID,APIKey)
     response = requests.get(URL)
     time.sleep(TIME_PAUSE_MATCH)
     return response.json()
 
 def requestMatchList(accountId,region):
-    URL = 'https://{}.api.riotgames.com/lol/match/v3/matchlists/by-account/{}?endIndex={}&api_key={}'.format(region,accountId,n_matchs,APIKey)
+    URL = 'https://{}.api.riotgames.com/lol/match/v4/matchlists/by-account/{}?endIndex={}&api_key={}'.format(region,accountId,n_matchs,APIKey)
     response = requests.get(URL)
     time.sleep(TIME_PAUSE)
     return response.json()
 
 def requestSummoner(summonerId,region):
-    URL = 'https://{}.api.riotgames.com/lol/summoner/v3/summoners/{}?api_key={}'.format(region,summonerId,APIKey)
+    URL = 'https://{}.api.riotgames.com/lol/summoner/v4/summoners/{}?api_key={}'.format(region,summonerId,APIKey)
     response = requests.get(URL)
     time.sleep(TIME_PAUSE)
     return response.json()
@@ -78,7 +78,7 @@ def BuscarJogadores(ProPlayers,qtd_jogadores,region):
     i=0
     for player in ProPlayers.entries:
         try:
-            ResponseJSON = requestSummoner(player['playerOrTeamId'],region)
+            ResponseJSON = requestSummoner(player['summonerId'],region)
             print('Player {} --- {} --- Region: {}\n'.format(ResponseJSON['name'],i,region))
             if i == 0:
                 SummonersList = pd.DataFrame([ResponseJSON])
@@ -88,7 +88,7 @@ def BuscarJogadores(ProPlayers,qtd_jogadores,region):
             if i >= qtd_jogadores:
                 break;
         except Exception as p:
-            print(p)
+            print('Exception: {}'.format(p))
             pass
     return SummonersList
 
@@ -107,6 +107,7 @@ def ListadePartidas(SummonersList,region):
         except Exception as p:
             print(p)
             pass
+    MatchList.reset_index(inplace=True, drop=True)
     return MatchList
 
 def BuscaPartidas(MatchList, queue = 420, qtd_max = 100000, region = 'BR1'):
@@ -116,7 +117,7 @@ def BuscaPartidas(MatchList, queue = 420, qtd_max = 100000, region = 'BR1'):
             for match in match_list:
                 try:
                     ResponseJSON = requestMatch(match['gameId'],region)
-                    print('Partida {} -- Region -- {}\n'.format(i))
+                    print('Partida {} -- Region -- {}\n'.format(i,region))
                     if ResponseJSON['queueId'] == queue:    
                         Dict_Partida = {}
                         Dict_Partida['gameId'] = ResponseJSON['gameId']
